@@ -81,34 +81,43 @@ with tab4:
     st.altair_chart(barchart, use_container_width=True)
     st.write("The list above showcases the H-1B denial sum by employee in descending order, with IBM CORPORATION having the highest number of denials. However, IBM CORPORATION remains H-1B friendly due to its large number of approvals. While some companies on the list may be perceived as non-H-1B friendly, it is essential to evaluate both their denial and approval numbers to have a comprehensive understanding of their H-1B visa practices.")
 
-
-
-import plotly.express as px
-
+import pydeck as pdk
 with tab5:
     st.subheader("H-1B Visa Approval by Location (Zip Code)")
-    st.write("In this section, a map visualization of H-1B visa approvals by zip code is presented. This allows foreign job seekers to have a better understanding of the geographical distribution of H-1B friendly companies in North Carolina.")
+    st.write("In this section, a map visualization of H-1B visa approvals by zip code is presented. This allows foreign job seekers to have a better understanding of the distribution of H-1B friendly companies in North Carolina.")
 
     # Group the data by Zip Code and calculate the sum of approvals for each Zip Code
-    zip_data = h1b_data.groupby("Zip")["Sum Approval"].sum().reset_index()
+    zip_data = h1b_data.groupby("ZIP")["Sum Approval"].sum().reset_index()
 
-    # Create a choropleth map using Plotly
-    map_chart = px.choropleth(zip_data,
-                              geojson="https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/nc_north_carolina_zip_codes_geo.min.json",
-                              featureidkey='properties.ZCTA5CE10',
-                              locations='Zip',
-                              color='Sum Approval',
-                              color_continuous_scale='blues',
-                              scope='usa',
-                              labels={'Sum Approval': 'Amount of Approval'},
-                              hover_name='Zip',
-                              hover_data=['Sum Approval'],
-                              title='H-1B Visa Approval by Zip Code in North Carolina')
+    # Create a PyDeck scatterplot layer
+    layer = pdk.Layer(
+        "ScatterplotLayer",
+        data=zip_data,
+        get_position=["LONGITUDE", "LATITUDE"],
+        get_radius=5000,
+        get_fill_color=["Sum Approval/2000", 0, 255-(np.log(zip_data["Sum Approval"])/np.log(zip_data["Sum Approval"].max()))*255],
+        pickable=True,
+        auto_highlight=True,
+        tooltip=["ZIP", "Sum Approval"]
+    )
 
-    # Set the map properties
-    map_chart.update_geos(fitbounds="locations", visible=False)
-    map_chart.update_layout(margin={"r": 0, "t": 30, "l": 0, "b": 0})
+    # Create a PyDeck view
+    view_state = pdk.ViewState(
+        latitude=35.8,
+        longitude=-78.7,
+        zoom=7,
+        bearing=0,
+        pitch=0
+    )
 
-    # Display the map
-    st.plotly_chart(map_chart, use_container_width=True)
-    st.write("The map above displays the locations of zip codes in North Carolina, with each zip code area colored based on the sum of H-1B visa approvals. The color of the zip code areas ranges from light blue to dark blue, indicating the amount of H-1B visa approvals. Dark blue zip code areas signify higher approval rates, while light blue areas indicate lower approval rates. Foreign job seekers can utilize this map to identify potential H-1B friendly employers in specific areas within North Carolina.")
+    # Create a PyDeck deck
+    deck = pdk.Deck(
+        layers=[layer],
+        initial_view_state=view_state,
+        map_style="mapbox://styles/mapbox/light-v9",
+        tooltip={"text": "{ZIP}\nSum of Approval: {Sum Approval}"}
+    )
+
+    # Display the PyDeck deck
+    st.pydeck_chart(deck)
+    st.write("The map above displays the sum of H-1B visa approvals by zip code in North Carolina. The map is color-coded based on the sum of approvals. Foreign job seekers can use this visualization to identify potential H-1B friendly employers in specific zip codes within North Carolina.")
