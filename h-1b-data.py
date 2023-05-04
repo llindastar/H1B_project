@@ -83,45 +83,32 @@ with tab4:
 
 
 
+import plotly.express as px
 
 with tab5:
-
     st.subheader("H-1B Visa Approval by Location (Zip Code)")
     st.write("In this section, a map visualization of H-1B visa approvals by zip code is presented. This allows foreign job seekers to have a better understanding of the geographical distribution of H-1B friendly companies in North Carolina.")
 
     # Group the data by Zip Code and calculate the sum of approvals for each Zip Code
     zip_data = h1b_data.groupby("Zip")["Sum Approval"].sum().reset_index()
 
-    # Function to obtain latitude and longitude for each Zip Code using geopy
-    def get_lat_lon(zip_code):
-        geolocator = Nominatim(user_agent="h1b_zip_locator")
-        geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
-        location = geocode({"postalcode": zip_code, "country": "United States"})
-        if location:
-            return location.latitude, location.longitude
-        else:
-            return None, None
+    # Create a choropleth map using Plotly
+    map_chart = px.choropleth(zip_data,
+                              geojson="https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/nc_north_carolina_zip_codes_geo.min.json",
+                              featureidkey='properties.ZCTA5CE10',
+                              locations='Zip',
+                              color='Sum Approval',
+                              color_continuous_scale='blues',
+                              scope='usa',
+                              labels={'Sum Approval': 'Amount of Approval'},
+                              hover_name='Zip',
+                              hover_data=['Sum Approval'],
+                              title='H-1B Visa Approval by Zip Code in North Carolina')
 
-    # Apply the function to get Latitude and Longitude for each unique Zip Code
-    zip_data["Latitude"], zip_data["Longitude"] = zip(*zip_data["Zip"].apply(get_lat_lon))
-
-    # Set up the color scale for the map
-    color_scale = alt.Scale(domain=[0, 1000, 2000], range=["lightblue", "mediumblue", "darkblue"])
-
-    # Create the map using Altair
-    map_chart = alt.Chart(zip_data).mark_circle().encode(
-        longitude='Longitude:Q',
-        latitude='Latitude:Q',
-        size=alt.Size('Sum Approval', title='H-1B Approval Size'),
-        color=alt.Color('Sum Approval:Q', scale=color_scale, title="Amount of Approval"),
-        tooltip=['Zip', 'Sum Approval', 'Latitude', 'Longitude']
-    ).project(
-        type='albersUsa'
-    ).properties(
-        width=800,
-        height=400
-    )
+    # Set the map properties
+    map_chart.update_geos(fitbounds="locations", visible=False)
+    map_chart.update_layout(margin={"r": 0, "t": 30, "l": 0, "b": 0})
 
     # Display the map
-    st.altair_chart(map_chart, use_container_width=True)
-    st.write("The map above displays the locations of zip codes in North Carolina, with the size of the circles representing the sum of H-1B visa approvals. The color of the circles ranges from light blue to dark blue, indicating the amount of H-1B visa approvals. Dark blue circles signify zip codes with higher approval rates, while light blue circles indicate areas with lower approval rates. Foreign job seekers can utilize this map to identify potential H-1B friendly employers in specific areas within North Carolina.")
+    st.plotly_chart(map_chart, use_container_width=True)
+    st.write("The map above displays the locations of zip codes in North Carolina, with each zip code area colored based on the sum of H-1B visa approvals. The color of the zip code areas ranges from light blue to dark blue, indicating the amount of H-1B visa approvals. Dark blue zip code areas signify higher approval rates, while light blue areas indicate lower approval rates. Foreign job seekers can utilize this map to identify potential H-1B friendly employers in specific areas within North Carolina.")
