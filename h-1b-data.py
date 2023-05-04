@@ -81,43 +81,33 @@ with tab4:
     st.altair_chart(barchart, use_container_width=True)
     st.write("The list above showcases the H-1B denial sum by employee in descending order, with IBM CORPORATION having the highest number of denials. However, IBM CORPORATION remains H-1B friendly due to its large number of approvals. While some companies on the list may be perceived as non-H-1B friendly, it is essential to evaluate both their denial and approval numbers to have a comprehensive understanding of their H-1B visa practices.")
 
-import pydeck as pdk
+
+
 with tab5:
-    st.subheader("H-1B Visa Approval by Location (Zip Code)")
-    st.write("In this section, a map visualization of H-1B visa approvals by zip code is presented. This allows foreign job seekers to have a better understanding of the distribution of H-1B friendly companies in North Carolina.")
+    # Group H-1B visa dataset by ZIP and employer
+    h1b_data_zip_emp = h1b_data.groupby(['ZIP', 'Employer'])['Sum Approval'].sum().reset_index()
 
-    # Group the data by Zip Code and calculate the sum of approvals for each Zip Code
-    zip_data = h1b_data.groupby("ZIP")["Sum Approval"].sum().reset_index()
+    # Load latitude and longitude for ZIP codes
+    zip_codes = pd.read_csv("data/zip_codes_lat_long.csv")
+    zip_codes = zip_codes.rename(columns={"Zip": "ZIP"})
 
-    # Create a PyDeck scatterplot layer
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=zip_data,
-        get_position=["LONGITUDE", "LATITUDE"],
-        get_radius=5000,
-        get_fill_color=["Sum Approval/2000", 0, 255-(np.log(zip_data["Sum Approval"])/np.log(zip_data["Sum Approval"].max()))*255],
-        pickable=True,
-        auto_highlight=True,
-        tooltip=["ZIP", "Sum Approval"]
+    # Merge latitude and longitude with H-1B data
+    h1b_data_zip_emp = pd.merge(h1b_data_zip_emp, zip_codes, on='ZIP', how='left')
+
+    # Create chart with markers for H-1B visa Sum Approval
+    chart = alt.Chart(h1b_data_zip_emp).mark_circle(size=50).encode(
+        longitude='longitude:Q',
+        latitude='latitude:Q',
+        color=alt.Color("Sum Approval", title="Sum of Approval"),
+        tooltip=['Employer', 'Sum Approval']
+    ).project(
+        type='albersUsa'
+    ).properties(
+        width=700,
+        height=500
     )
 
-    # Create a PyDeck view
-    view_state = pdk.ViewState(
-        latitude=35.8,
-        longitude=-78.7,
-        zoom=7,
-        bearing=0,
-        pitch=0
-    )
+    # Display chart
+    st.write("Map of H-1B Visa Applications by Employer and ZIP Code")
+    st.altair_chart(chart, use_container_width=True)
 
-    # Create a PyDeck deck
-    deck = pdk.Deck(
-        layers=[layer],
-        initial_view_state=view_state,
-        map_style="mapbox://styles/mapbox/light-v9",
-        tooltip={"text": "{ZIP}\nSum of Approval: {Sum Approval}"}
-    )
-
-    # Display the PyDeck deck
-    st.pydeck_chart(deck)
-    st.write("The map above displays the sum of H-1B visa approvals by zip code in North Carolina. The map is color-coded based on the sum of approvals. Foreign job seekers can use this visualization to identify potential H-1B friendly employers in specific zip codes within North Carolina.")
