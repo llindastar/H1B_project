@@ -82,45 +82,46 @@ with tab4:
     st.write("The list above showcases the H-1B denial sum by employee in descending order, with IBM CORPORATION having the highest number of denials. However, IBM CORPORATION remains H-1B friendly due to its large number of approvals. While some companies on the list may be perceived as non-H-1B friendly, it is essential to evaluate both their denial and approval numbers to have a comprehensive understanding of their H-1B visa practices.")
 
 
-with tab5:
-# create tab 5
-    tab5 = app.layout.Tab(label='Map')
-    tab5_content = html.Div([
-        dcc.Graph(
-            id='h1b-map',
-            figure={
-                'data': [
-                    go.Scattermapbox(
-                        lat=h1b_data['lat'],
-                        lon=h1b_data['lon'],
-                        mode='markers',
-                        marker=go.scattermapbox.Marker(
-                            size=h1b_data['Sum Approval'],
-                            sizemode='diameter',
-                            sizeref=h1b_data['Sum Approval'].max() / 20,
-                            color=np.where(h1b_data['Sum Approval'] > h1b_data['Sum Approval'].median(), 'blue', 'red')
-                        ),
-                        text=h1b_data['Zip']
-                    )
-                ],
-                'layout': go.Layout(
-                    title='H1B Approval Amounts by Zip Code',
-                    autosize=True,
-                    hovermode='closest',
-                    mapbox=dict(
-                        accesstoken=mapbox_access_token,
-                        bearing=0,
-                        center=dict(
-                            lat=h1b_data['lat'].mean(),
-                            lon=h1b_data['lon'].mean()
-                        ),
-                        pitch=0,
-                        zoom=4
-                    ),
-                    margin={'l': 40, 'b': 40, 't': 60, 'r': 10}
-                )
-            }
-        )
-    ])
-    tab5.children = [tab5_content]
 
+
+with tab5:
+
+    st.subheader("H-1B Visa Approval by Location (Zip Code)")
+    st.write("In this section, a map visualization of H-1B visa approvals by zip code is presented. This allows foreign job seekers to have a better understanding of the geographical distribution of H-1B friendly companies in North Carolina.")
+
+    # Group the data by Zip Code and calculate the sum of approvals for each Zip Code
+    zip_data = h1b_data.groupby("Zip")["Sum Approval"].sum().reset_index()
+
+    # Function to obtain latitude and longitude for each Zip Code using geopy
+    def get_lat_lon(zip_code):
+        geolocator = Nominatim(user_agent="h1b_zip_locator")
+        geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
+        location = geocode({"postalcode": zip_code, "country": "United States"})
+        if location:
+            return location.latitude, location.longitude
+        else:
+            return None, None
+
+    # Apply the function to get Latitude and Longitude for each unique Zip Code
+    zip_data["Latitude"], zip_data["Longitude"] = zip(*zip_data["Zip"].apply(get_lat_lon))
+
+    # Set up the color scale for the map
+    color_scale = alt.Scale(domain=[0, 1000, 2000], range=["lightblue", "mediumblue", "darkblue"])
+
+    # Create the map using Altair
+    map_chart = alt.Chart(zip_data).mark_circle().encode(
+        longitude='Longitude:Q',
+        latitude='Latitude:Q',
+        size=alt.Size('Sum Approval', title='H-1B Approval Size'),
+        color=alt.Color('Sum Approval:Q', scale=color_scale, title="Amount of Approval"),
+        tooltip=['Zip', 'Sum Approval', 'Latitude', 'Longitude']
+    ).project(
+        type='albersUsa'
+    ).properties(
+        width=800,
+        height=400
+    )
+
+    # Display the map
+    st.altair_chart(map_chart, use_container_width=True)
+    st.write("The map above displays the locations of zip codes in North Carolina, with the size of the circles representing the sum of H-1B visa approvals. The color of the circles ranges from light blue to dark blue, indicating the amount of H-1B visa approvals. Dark blue circles signify zip codes with higher approval rates, while light blue circles indicate areas with lower approval rates. Foreign job seekers can utilize this map to identify potential H-1B friendly employers in specific areas within North Carolina.")
