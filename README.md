@@ -12,4 +12,4 @@ Tab 4 illustrates the H-1B visa denial sum by employee in descending order. This
 
 Upon analyzing this study, we can conclude that IBM CORPORATION has the highest number of approvals, significantly surpassing all other companies in North Carolina. This suggests that IBM employees have a good chance of being selected for H-1B visas.
 
-Link to streamlit app:
+Link to streamlit app: https://llindastar-h1b-project-h-1b-data-zr9k5k.streamlit.app/
