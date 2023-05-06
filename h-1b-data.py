@@ -22,7 +22,7 @@ approval_amount = st.sidebar.slider("Amount of Approval",min_value=0, max_value=
 denail_amount = st.sidebar.slider("Amount of Denial",min_value=0, max_value=50, value=2, step=1)
 
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(['Overview', 'Dataset','Approval', 'Denial', 'Map'])
+tab1, tab2, tab3, tab4 = st.tabs(['Overview', 'Dataset','Approval', 'Denial'])
 
 with tab1:
     st.subheader("H-1B Visa")
@@ -82,32 +82,4 @@ with tab4:
     st.write("The list above showcases the H-1B denial sum by employee in descending order, with IBM CORPORATION having the highest number of denials. However, IBM CORPORATION remains H-1B friendly due to its large number of approvals. While some companies on the list may be perceived as non-H-1B friendly, it is essential to evaluate both their denial and approval numbers to have a comprehensive understanding of their H-1B visa practices.")
 
 
-
-with tab5:
-    # Group H-1B visa dataset by ZIP and employer
-    h1b_data_zip_emp = h1b_data.groupby(['ZIP', 'Employer'])['Sum Approval'].sum().reset_index()
-
-    # Load latitude and longitude for ZIP codes
-    zip_codes = pd.read_csv("data/zip_codes_lat_long.csv")
-    zip_codes = zip_codes.rename(columns={"Zip": "ZIP"})
-
-    # Merge latitude and longitude with H-1B data
-    h1b_data_zip_emp = pd.merge(h1b_data_zip_emp, zip_codes, on='ZIP', how='left')
-
-    # Create chart with markers for H-1B visa Sum Approval
-    chart = alt.Chart(h1b_data_zip_emp).mark_circle(size=50).encode(
-        longitude='longitude:Q',
-        latitude='latitude:Q',
-        color=alt.Color("Sum Approval", title="Sum of Approval"),
-        tooltip=['Employer', 'Sum Approval']
-    ).project(
-        type='albersUsa'
-    ).properties(
-        width=700,
-        height=500
-    )
-
-    # Display chart
-    st.write("Map of H-1B Visa Applications by Employer and ZIP Code")
-    st.altair_chart(chart, use_container_width=True)
 
